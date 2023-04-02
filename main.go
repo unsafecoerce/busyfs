@@ -4,15 +4,16 @@ package main
 import "C"
 
 import (
+	"fmt"
 	"io"
 	"unsafe"
+
+	object "github.com/juicedata/juicefs/pkg/object"
 
 	// pin go pointer to avoid been garbage collected.
 	//
 	// see discussion in https://github.com/golang/go/issues/46787, the dependency
 	// can be got rid of once the Pin API is available in Go.
-	object "github.com/juicedata/juicefs/pkg/object"
-
 	ptrguard "github.com/unsafecoerce/objectfs/pkg/ptrguard"
 )
 
@@ -42,6 +43,8 @@ func ReaderPin(reader io.ReadCloser) *unsafe.Pointer {
 //export ReaderUnpin
 func ReaderUnpin(reader *unsafe.Pointer) {
 	r := (*Reader)(*reader)
+	// ensure the reader been closed before unpin
+	_ = r.Close()
 	r.pinner.Unpin()
 	C.free(unsafe.Pointer(reader))
 }
@@ -69,10 +72,11 @@ func ReaderRead(reader *unsafe.Pointer, buf []byte) (ok bool, e *C.char, n int) 
 type Writer struct {
 	io.WriteCloser
 	pinner ptrguard.Pinner
+	reader io.ReadCloser
 }
 
-func WriterPin(writer io.WriteCloser) *unsafe.Pointer {
-	w := &Writer{writer, ptrguard.Pinner{}}
+func WriterPin(writer io.WriteCloser, reader io.ReadCloser) *unsafe.Pointer {
+	w := &Writer{writer, ptrguard.Pinner{}, reader}
 	pinned := w.pinner.Pin(w)
 	ptr := (*unsafe.Pointer)(C.malloc(C.size_t(POINTER_SIZE)))
 	pinned.Store(ptr)
@@ -81,15 +85,16 @@ func WriterPin(writer io.WriteCloser) *unsafe.Pointer {
 
 //export WriterUnpin
 func WriterUnpin(writer *unsafe.Pointer) {
-	r := (*Writer)(*writer)
-	r.pinner.Unpin()
+	w := (*Writer)(*writer)
+	_ = w.Close()
+	w.pinner.Unpin()
 	C.free(unsafe.Pointer(writer))
 }
 
 //export WriterClose
 func WriterClose(writer *unsafe.Pointer) (ok bool, e *C.char) {
-	r := (*Writer)(*writer)
-	err := r.Close()
+	w := (*Writer)(*writer)
+	err := w.Close()
 	if err != nil {
 		return false, C.CString(err.Error())
 	}
@@ -98,8 +103,8 @@ func WriterClose(writer *unsafe.Pointer) (ok bool, e *C.char) {
 
 //export WriterWrite
 func WriterWrite(writer *unsafe.Pointer, buf []byte) (ok bool, e *C.char, n int) {
-	r := (*Writer)(*writer)
-	n, err := r.Write(buf)
+	w := (*Writer)(*writer)
+	n, err := w.Write(buf)
 	if err != nil {
 		return false, C.CString(err.Error()), n
 	}
@@ -214,11 +219,11 @@ func StorageGet(storage *unsafe.Pointer, key string, off int64, limit int64) (ok
 //export StorageCreateReaderWriter
 func StorageCreateReaderWriter(storage *unsafe.Pointer) (reader *unsafe.Pointer, writer *unsafe.Pointer) {
 	r, w := io.Pipe()
-	return ReaderPin(r), WriterPin(w)
+	return ReaderPin(r), WriterPin(w, nil)
 }
 
-//export StoragePut
-func StoragePut(storage *unsafe.Pointer, key string, reader *unsafe.Pointer) (ok bool, e *C.char) {
+//export StoragePutReader
+func StoragePutReader(storage *unsafe.Pointer, key string, reader *unsafe.Pointer) (ok bool, e *C.char) {
 	store := (*ObjectStorage)(*storage)
 	r := (*Reader)(*reader)
 	defer r.Close()
@@ -229,16 +234,21 @@ func StoragePut(storage *unsafe.Pointer, key string, reader *unsafe.Pointer) (ok
 	return true, nil
 }
 
-//export StoragePutAsync
-func StoragePutAsync(storage *unsafe.Pointer, key string) (ok bool, e *C.char, writer *unsafe.Pointer) {
+//export StoragePut
+func StoragePut(storage *unsafe.Pointer, key string) (ok bool, e *C.char, writer *unsafe.Pointer) {
 	store := (*ObjectStorage)(*storage)
 	r, w := io.Pipe()
+	dupKey := dup(key)
 	// `storage.Put()` is a blocking operation.
 	go func() {
 		defer r.Close()
-		store.Put(dup(key), r)
+		if err := store.Put(dupKey, r); err != nil {
+			fmt.Printf("[error] failed to put object '%s': %s", dupKey, err)
+		}
+		// close the reader
+		_ = r.Close()
 	}()
-	return true, nil, WriterPin(w)
+	return true, nil, WriterPin(w, r)
 }
 
 //export StorageDelete

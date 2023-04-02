@@ -1,3 +1,6 @@
+// This module is borrowed from https://github.com/ansiwen/ptrguard with slight
+// modifications.
+
 // Package ptrguard allows to pin a Go object (in memory allocated by the Go
 // runtime), so that it will not be touched by the garbage collector until it is
 // unpinned again.

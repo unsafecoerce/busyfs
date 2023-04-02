@@ -92,7 +92,7 @@ vendor:
 # Examples
 examples: read_local
 
-EXAMPLE_CC_FLAGS						:= -O2 -Wall -Iinclude -Llib -Wl,-rpath,lib
+EXAMPLE_CC_FLAGS						:= -O2 -Wall -Iinclude -Llib -Wl,-rpath,lib -pthread
 EXAMPLE_DEPS							:=
 ifdef STATIC
 	EXAMPLE_CC_FLAGS					:= $(EXAMPLE_CC_FLAGS) -lobjectfs_static

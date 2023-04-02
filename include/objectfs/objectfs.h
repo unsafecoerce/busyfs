@@ -53,7 +53,8 @@ class reader_t {
 public:
   int read(std::string &err, void *buf, size_t size) {
     err.clear();
-    auto result = ReaderRead(reader_, {buf, static_cast<GoInt>(size), static_cast<GoInt>(size)});
+    auto result = ReaderRead(
+        reader_, {buf, static_cast<GoInt>(size), static_cast<GoInt>(size)});
     if (!result.r0) {
       err = std::string(result.r1);
       free(result.r1);
@@ -207,25 +208,26 @@ public:
     return std::make_pair(reader_t(result.r0), writer_t(result.r1));
   }
 
-  void put(std::string &err, const std::string &key, reader_t &reader) {
+  void put_reader(std::string &err, const std::string &key, reader_t &reader) {
     err.clear();
-    auto result =
-        StoragePut(storage_, {key.c_str(), static_cast<GoInt>(key.size())},
-                   reader.reader_);
+    auto result = StoragePutReader(
+        storage_, {key.c_str(), static_cast<GoInt>(key.size())},
+        reader.reader_);
     if (!result.r0) {
       err = std::string(result.r1);
       free(result.r1);
     }
   }
 
-  void write(std::string &err, const std::string &key, reader_t &reader) {
-    return put(err, key, reader);
+  void write_reader(std::string &err, const std::string &key,
+                    reader_t &reader) {
+    return put_reader(err, key, reader);
   }
 
-  writer_t put_async(std::string &err, const std::string &key) {
+  writer_t put(std::string &err, const std::string &key) {
     err.clear();
-    auto result = StoragePutAsync(
-        storage_, {key.c_str(), static_cast<GoInt>(key.size())});
+    auto result =
+        StoragePut(storage_, {key.c_str(), static_cast<GoInt>(key.size())});
     if (!result.r0) {
       err = std::string(result.r1);
       free(result.r1);
@@ -234,8 +236,8 @@ public:
     return writer_t(result.r2);
   }
 
-  writer_t write_async(std::string &err, const std::string &key) {
-    return put_async(err, key);
+  writer_t write(std::string &err, const std::string &key) {
+    return put(err, key);
   }
 
   void remove(std::string &err, const std::string &key) {
