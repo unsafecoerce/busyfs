@@ -1,0 +1,60 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: CI
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+
+      - name: Cache for golang
+        uses: actions/cache@v3
+        with:
+          path: ~/go
+          key: objectfs-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            objectfs-go-
+
+      - name: Build
+        run: |
+          make build
+          tree lib/ || true
+          tree include/ || true
+
+      - name: Test examples
+        run: |
+          make examples
+
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`/lib
+          export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:`pwd`/lib
+
+          ./bin/read_local

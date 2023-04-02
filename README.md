@@ -1,7 +1,7 @@
 # ObjectFS
 
-ObjectFS is a zero-dependency library that allows you to interact (read/write) with ANY object storage,
-such as local filesystem, HDFS, S3, OSS, and more.
+ObjectFS is a zero-dependency, single `.h/.a/.so/.dylib/.dll` library that allows you to interact
+(read/write) with ANY object storage, such as local filesystem, HDFS, S3, OSS, and more.
 
 ## Motivation and Design
 

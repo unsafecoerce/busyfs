@@ -48,12 +48,12 @@ all: build
 
 build: build-static build-shared
 
-build-static: $(STATIC_LIBRARY)
+build-static: vendor $(STATIC_LIBRARY)
 $(STATIC_LIBRARY): $(SOURCES)
 	go build $(GO_FLAGS) -buildmode=c-archive -o $(STATIC_LIBRARY)
 	@mv lib/libobjectfs_static.h $(EXPORT_HEADER)
 
-build-shared: $(SHARED_LIBRARY)
+build-shared: vendor $(SHARED_LIBRARY)
 $(SHARED_LIBRARY): $(SOURCES)
 	go build $(GO_FLAGS) -buildmode=c-shared -o $(SHARED_LIBRARY)
 	@mv lib/libobjectfs_shared.h $(EXPORT_HEADER)
@@ -92,7 +92,7 @@ vendor:
 # Examples
 examples: read_local
 
-EXAMPLE_CC_FLAGS						:= -O2 -Wall -Iinclude -Llib -Wl,-rpath,lib -pthread
+EXAMPLE_CC_FLAGS						:= -std=c++11 -O2 -Wall -Iinclude -Llib -Wl,-rpath,lib -pthread
 EXAMPLE_DEPS							:=
 ifdef STATIC
 	EXAMPLE_CC_FLAGS					:= $(EXAMPLE_CC_FLAGS) -lobjectfs_static
