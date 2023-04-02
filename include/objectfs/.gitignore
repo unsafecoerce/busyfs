@@ -1,3 +1,4 @@
 *
 !/.gitignore
 !/objectfs.h
+!/objectfs_generated.h
