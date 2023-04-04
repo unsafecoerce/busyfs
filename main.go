@@ -27,6 +27,12 @@ func dup(s string) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
+func dups(s []byte) []byte {
+	b := make([]byte, len(s))
+	copy(b, s)
+	return s
+}
+
 type Reader struct {
 	io.ReadCloser
 	pinner ptrguard.Pinner
@@ -104,7 +110,7 @@ func WriterClose(writer *unsafe.Pointer) (ok bool, e *C.char) {
 //export WriterWrite
 func WriterWrite(writer *unsafe.Pointer, buf []byte) (ok bool, e *C.char, n int) {
 	w := (*Writer)(*writer)
-	n, err := w.Write(buf)
+	n, err := w.Write(dups(buf))
 	if err != nil {
 		return false, C.CString(err.Error()), n
 	}
