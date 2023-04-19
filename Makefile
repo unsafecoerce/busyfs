@@ -31,16 +31,22 @@ endif
 
 # strip, and disable dwraf info
 LDFLAGS									= -s -w
+STATIC_LDFLAGS							=
+SHARED_LDFLAGS							=
 ifdef STATIC
 	CC = /usr/bin/musl-gcc
 	export CC
 	LDFLAGS								+= -linkmode external -extldflags '-static'
 endif
 ifeq ($(UNAME_S),Linux)
-	LDFLAGS								+= -extldflags '-static-libgcc -static-libstdc++ -Wl,--version-script=objectfs.map'
+	LDFLAGS								+= -extldflags '-static-libgcc -static-libstdc++'
+	SHARED_LDFLAGS						+= -extldflags '-Wl,--version-script=objectfs.map'
+endif
+ifeq ($(UNAME_S),Darwin)
+	SHARED_LDFLAGS						+= -extldflags '-install_name @rpath/libobjectfs_shared.dylib'
 endif
 
-GO_FLAGS 								:= -mod=vendor -ldflags="$(LDFLAGS)" -trimpath
+GO_FLAGS 								:= -mod=vendor -trimpath
 
 SOURCES									= $(wildcard *.go)
 EXPORT_HEADER							:= include/objectfs/objectfs_generated.h
@@ -53,18 +59,19 @@ build: build-static build-shared
 
 build-static: vendor $(STATIC_LIBRARY)
 $(STATIC_LIBRARY): $(SOURCES)
-	go build $(GO_FLAGS) -buildmode=c-archive -o $(STATIC_LIBRARY)
+	go build $(GO_FLAGS) -ldflags="$(LDFLAGS)" -ldflags="$(STATIC_LDFLAGS)" -buildmode=c-archive -o $(STATIC_LIBRARY)
 	@mv lib/libobjectfs_static.h $(EXPORT_HEADER)
 
 build-shared: vendor $(SHARED_LIBRARY)
 $(SHARED_LIBRARY): $(SOURCES)
-	go build $(GO_FLAGS) -buildmode=c-shared -o $(SHARED_LIBRARY)
+	go build $(GO_FLAGS) -ldflags="$(LDFLAGS)" -ldflags="$(SHARED_LDFLAGS)" -buildmode=c-shared -o $(SHARED_LIBRARY)
 	@mv lib/libobjectfs_shared.h $(EXPORT_HEADER)
 
 clean:
 	@rm -f $(EXPORT_HEADER)
 	@rm -f $(STATIC_LIBRARY)
 	@rm -f $(SHARED_LIBRARY)
+	@rm -rf bin/*
 .PHONY: clean
 
 # Installation
@@ -95,7 +102,16 @@ vendor:
 # Examples
 examples: read_local
 
-EXAMPLE_CC_FLAGS						:= -std=c++11 -O2 -Wall -Iinclude -Llib -Wl,-rpath,lib -pthread
+EXAMPLE_CC_LDFLAGS 						:= -pthread
+ifeq ($(UNAME_S),Linux)
+	EXAMPLE_CC_LDFLAGS					+= -Wl,"-rpath,\$$ORIGIN/../lib"
+endif
+ifeq ($(UNAME_S),Darwin)
+	EXAMPLE_CC_LDFLAGS					+= -Wl,"-rpath,@loader_path/../lib" -Wl,"-rpath,@executable_path/../lib"
+endif
+
+EXAMPLE_CC_FLAGS						:= -std=c++11 -O2 -Wall -Iinclude -Llib $(EXAMPLE_CC_LDFLAGS)
+
 EXAMPLE_DEPS							:=
 ifdef STATIC
 	EXAMPLE_CC_FLAGS					:= $(EXAMPLE_CC_FLAGS) -lobjectfs_static
