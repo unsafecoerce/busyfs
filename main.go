@@ -21,16 +21,16 @@ const (
 	POINTER_SIZE = int(unsafe.Sizeof(unsafe.Pointer(nil)))
 )
 
-func dup(s string) string {
-	b := make([]byte, len(s))
-	copy(b, s)
-	return *(*string)(unsafe.Pointer(&b))
-}
-
-func dups(s []byte) []byte {
+func bdup(s []byte) []byte {
 	b := make([]byte, len(s))
 	copy(b, s)
 	return s
+}
+
+func sdup(s string) string {
+	b := make([]byte, len(s))
+	copy(b, s)
+	return *(*string)(unsafe.Pointer(&b))
 }
 
 type Reader struct {
@@ -110,7 +110,7 @@ func WriterClose(writer *unsafe.Pointer) (ok bool, e *C.char) {
 //export WriterWrite
 func WriterWrite(writer *unsafe.Pointer, buf []byte) (ok bool, e *C.char, n int) {
 	w := (*Writer)(*writer)
-	n, err := w.Write(dups(buf))
+	n, err := w.Write(bdup(buf))
 	if err != nil {
 		return false, C.CString(err.Error()), n
 	}
@@ -189,7 +189,7 @@ func StorageUnpin(storage *unsafe.Pointer) {
 
 //export CreateStorage
 func CreateStorage(name string, endpoint string, access_key string, secret_key string, token string) (ok bool, e *C.char, storage *unsafe.Pointer) {
-	s, err := object.CreateStorage(dup(name), dup(endpoint), dup(access_key), dup(secret_key), dup(token))
+	s, err := object.CreateStorage(sdup(name), sdup(endpoint), sdup(access_key), sdup(secret_key), sdup(token))
 	if err != nil {
 		return false, C.CString(err.Error()), nil
 	}
@@ -215,7 +215,7 @@ func StorageCreate(storage *unsafe.Pointer) (ok bool, e *C.char) {
 //export StorageGet
 func StorageGet(storage *unsafe.Pointer, key string, off int64, limit int64) (ok bool, e *C.char, reader *unsafe.Pointer) {
 	store := (*ObjectStorage)(*storage)
-	r, err := store.Get(dup(key), off, limit)
+	r, err := store.Get(sdup(key), off, limit)
 	if err != nil {
 		return false, C.CString(err.Error()), nil
 	}
@@ -233,7 +233,7 @@ func StoragePutReader(storage *unsafe.Pointer, key string, reader *unsafe.Pointe
 	store := (*ObjectStorage)(*storage)
 	r := (*Reader)(*reader)
 	defer r.Close()
-	err := store.Put(dup(key), r)
+	err := store.Put(sdup(key), r)
 	if err != nil {
 		return false, C.CString(err.Error())
 	}
@@ -244,7 +244,7 @@ func StoragePutReader(storage *unsafe.Pointer, key string, reader *unsafe.Pointe
 func StoragePut(storage *unsafe.Pointer, key string) (ok bool, e *C.char, writer *unsafe.Pointer) {
 	store := (*ObjectStorage)(*storage)
 	r, w := io.Pipe()
-	dupKey := dup(key)
+	dupKey := sdup(key)
 	// `storage.Put()` is a blocking operation.
 	go func() {
 		defer r.Close()
@@ -260,7 +260,7 @@ func StoragePut(storage *unsafe.Pointer, key string) (ok bool, e *C.char, writer
 //export StorageDelete
 func StorageDelete(storage *unsafe.Pointer, key string) (ok bool, e *C.char) {
 	store := (*ObjectStorage)(*storage)
-	err := store.Delete(dup(key))
+	err := store.Delete(sdup(key))
 	if err != nil {
 		return false, C.CString(err.Error())
 	}
@@ -270,7 +270,7 @@ func StorageDelete(storage *unsafe.Pointer, key string) (ok bool, e *C.char) {
 //export StorageHead
 func StorageHead(storage *unsafe.Pointer, key string) (ok bool, e *C.char, object *unsafe.Pointer) {
 	store := (*ObjectStorage)(*storage)
-	obj, err := store.Head(dup(key))
+	obj, err := store.Head(sdup(key))
 	if err != nil {
 		return false, C.CString(err.Error()), nil
 	}
@@ -280,7 +280,7 @@ func StorageHead(storage *unsafe.Pointer, key string) (ok bool, e *C.char, objec
 //export StorageList
 func StorageList(storage *unsafe.Pointer, prefix string, marker string, limit int64) (ok bool, e *C.char, objects_size int64, objects **unsafe.Pointer) {
 	store := (*ObjectStorage)(*storage)
-	listed_objects, err := store.List(dup(prefix), dup(marker), limit)
+	listed_objects, err := store.List(sdup(prefix), sdup(marker), limit)
 	if err != nil {
 		return false, C.CString(err.Error()), 0, nil
 	}
@@ -294,7 +294,7 @@ func StorageList(storage *unsafe.Pointer, prefix string, marker string, limit in
 //export StorageListAll
 func StorageListAll(storage *unsafe.Pointer, prefix string, marker string) (ok bool, e *C.char, objects_size int64, objects **unsafe.Pointer) {
 	store := (*ObjectStorage)(*storage)
-	listed_objects_chan, err := store.ListAll(dup(prefix), dup(marker))
+	listed_objects_chan, err := store.ListAll(sdup(prefix), sdup(marker))
 	if err != nil {
 		return false, C.CString(err.Error()), 0, nil
 	}

@@ -23,8 +23,6 @@ ifeq ($(PREFIX),)
 	PREFIX 								:= /usr/local
 endif
 
-GO_FLAGS 								:= -mod=vendor -ldflags="$(LDFLAGS)" -trimpath
-
 ifdef DEBUG
 	GODEBUG=cgocheck=2
 	export GODEBUG
@@ -38,6 +36,11 @@ ifdef STATIC
 	export CC
 	LDFLAGS								+= -linkmode external -extldflags '-static'
 endif
+ifeq ($(UNAME_S),Linux)
+	LDFLAGS								+= -extldflags '-static-libgcc -static-libstdc++ -Wl,--version-script=objectfs.map'
+endif
+
+GO_FLAGS 								:= -mod=vendor -ldflags="$(LDFLAGS)" -trimpath
 
 SOURCES									= $(wildcard *.go)
 EXPORT_HEADER							:= include/objectfs/objectfs_generated.h

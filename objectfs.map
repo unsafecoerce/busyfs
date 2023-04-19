@@ -1,0 +1,30 @@
+{
+  global:
+    CreateStorage;
+    ObjectIsDir;
+    ObjectIsSymlink;
+    ObjectKey;
+    ObjectMtime;
+    ObjectSize;
+    ObjectUnpin;
+    ReaderClose;
+    ReaderRead;
+    ReaderUnpin;
+    StorageCreate;
+    StorageCreateReaderWriter;
+    StorageDelete;
+    StorageDescribe;
+    StorageGet;
+    StorageHead;
+    StorageList;
+    StorageListAll;
+    StoragePut;
+    StoragePutReader;
+    StorageUnpin;
+    WriterClose;
+    WriterUnpin;
+    WriterWrite;
+
+  local:
+    *;
+};

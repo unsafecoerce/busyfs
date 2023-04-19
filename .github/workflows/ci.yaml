@@ -36,14 +36,6 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: Cache for golang
-        uses: actions/cache@v3
-        with:
-          path: ~/go
-          key: objectfs-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            objectfs-go-
-
       - name: Build
         run: |
           make build
