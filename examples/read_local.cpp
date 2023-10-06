@@ -2,16 +2,16 @@
 #include <iostream>
 #include <thread>
 
-#include <../include/objectfs/objectfs.h>
+#include "../include/busyfs/busyfs.h"
 
-int describe(objectfs::storage_t &storage) {
+int describe(busyfs::storage_t &storage) {
   // describe the storage
   auto description = storage.describe();
   std::cout << "description: " << description << std::endl;
   return 0;
 }
 
-int check_file_meta(objectfs::storage_t &storage) {
+int check_file_meta(busyfs::storage_t &storage) {
   // check the file meta
   std::string err;
   auto object = storage.head(err, "main.go");
@@ -28,7 +28,7 @@ int check_file_meta(objectfs::storage_t &storage) {
   return 0;
 }
 
-int list_directory(objectfs::storage_t &storage) {
+int list_directory(busyfs::storage_t &storage) {
   // list the directory
   std::string err;
   auto files = storage.list_all(err, "");
@@ -43,7 +43,7 @@ int list_directory(objectfs::storage_t &storage) {
   return 0;
 }
 
-int read_and_write_file(objectfs::storage_t &storage) {
+int read_and_write_file(busyfs::storage_t &storage) {
   // read and write the file
   std::string err;
   auto reader = storage.read(err, "main.go");
@@ -80,7 +80,7 @@ int read_and_write_file(objectfs::storage_t &storage) {
   return 0;
 }
 
-int read_and_write_file_explicitly(objectfs::storage_t &storage) {
+int read_and_write_file_explicitly(busyfs::storage_t &storage) {
   // read and write the file
   std::string err;
   auto reader = storage.read(err, "main.go");
@@ -129,7 +129,7 @@ int read_and_write_file_explicitly(objectfs::storage_t &storage) {
 
 int main() {
   std::string err;
-  auto storage = objectfs::storage_t::create(err, "file", "");
+  auto storage = busyfs::storage_t::create(err, "file", "");
   if (!err.empty()) {
     std::cout << "error: " << err << std::endl;
     return 1;

@@ -20,15 +20,16 @@ COPY Makefile Makefile
 
 # Build
 RUN make && \
-    ldd ./libobjectfs.so
+    ldd ./libbusy.so && \
+    (strip ./libbusy.so || true)
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 
-COPY --from=builder /workspace/libobjectfs.h /libobjectfs.h
-COPY --from=builder /workspace/libobjectfs.a /libobjectfs.a
-COPY --from=builder /workspace/libobjectfs.so /libobjectfs.so
+COPY --from=builder /workspace/libbusyfs.h /libbusyfs.h
+COPY --from=builder /workspace/libbusyfs.a /libbusyfs.a
+COPY --from=builder /workspace/libbusyfs.so /libbusyfs.so
 
 USER nonroot:nonroot
